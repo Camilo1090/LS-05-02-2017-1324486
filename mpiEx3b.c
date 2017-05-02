@@ -4,7 +4,7 @@
 
 int main(int argc,char *argv[]){
 	int size, rank, dest, source, count, tag=1;
-	int inmsg, outmsg=5432;
+	int inmsg, outmsg;
 	MPI_Status Stat;
 
 	MPI_Init(&argc,&argv);
@@ -12,12 +12,13 @@ int main(int argc,char *argv[]){
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	
 	dest = (rank + 1) % size;
+	outmsg = rank;
 
 	if (rank == 0) {
-	  source = size - 1;  
+	  source = size - 1;
 	  MPI_Send(&outmsg, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
 	  MPI_Recv(&inmsg, 1, MPI_INT, source, tag, MPI_COMM_WORLD, &Stat);
-	}else {
+	} else {
 	  source = rank - 1;
 	  MPI_Recv(&inmsg, 1, MPI_INT, source, tag, MPI_COMM_WORLD, &Stat);
 	  MPI_Send(&outmsg, 1, MPI_INT, dest, tag, MPI_COMM_WORLD);
