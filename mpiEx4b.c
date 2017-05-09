@@ -3,7 +3,7 @@
 #include "mpi.h"
 
 int main(int argc,char *argv[]){
-	int i, upToVal, tag=1;
+	int i, upToVal;
 	int start, end, size, rank;
 	long sum, sumTotal;
 	MPI_Status Stat;
@@ -25,23 +25,11 @@ int main(int argc,char *argv[]){
 		sum = 0;
 	  	for(i=start; i<= end; i++){
 	 	 	sum = sum + i;
-	 	}	
-		sumTotal = sum;
-
-		if (rank == 0) {		
-			for (i=1; i<size; i++){
-				MPI_Recv(&sum, 1, MPI_LONG, i, tag, MPI_COMM_WORLD, &Stat);
-				sumTotal += sum;
-			}
-			//printf ("\nTotal: %d\n",sumTotal);
-		} else {
-		  	MPI_Send(&sum, 1, MPI_LONG, 0, tag, MPI_COMM_WORLD);
-		}
-
-	
+	 	}
 		
 		// Utilice la funcion 'MPI_Reduce' para guardar en la variable 
 		// 'sumTotal' la suma parcial de todos las tareas 
+		MPI_Reduce(&sum, &sumTotal, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);		
 		printf ("Proceso %d - Total: %li\n", rank, sumTotal);
 	}
 	else {
