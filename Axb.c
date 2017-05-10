@@ -115,8 +115,11 @@ Este metodo se encarga de enviar el vector 'v' a cada uno de los procesos.
 */
 int sendvector(int dim, int size, int *v) {
 	int i;
-	for (i = 1; i < size; i++) // Enviar vector 'b' a todos
-		MPI_Send(v,dim,MPI_INT,i,TAGVECTOR,MPI_COMM_WORLD);
+	
+	for (i = 1; i < size; i++) { // Enviar vector 'b' a todos
+		MPI_Send(v, dim, MPI_INT, i, TAGVECTOR, MPI_COMM_WORLD);
+	}
+	
 	return 0;
 }
 
@@ -133,19 +136,36 @@ int distributereceive(int f, int c, int *m, int *x, int size) {
 	Si no hay mas filas que procesar enviar un mensaje a los procesos para que 
 	detengan su ejecucion.
 	*/
-	int i, j, dest;
+	int i, j, currentRow=0, rowSum, xPos=0, rowsSent;
 	int fila[c];
+	MPI_Status Stat;	
 	
-	for (i=0; i<f; i++) {
-		dest = i % size;
-		for (j=0; j<c; j++) {
-			//
+	while (currentRow < f) {
+		rowsSent = 1;
+		for (i=1; i<size; i++) {
+			if (currentRow < f) {
+				for (j=0; j<c; j++) {
+					fila[j] = m[j+(currentRow*c)];
+				}
+				
+				MPI_Send(fila, c, MPI_INT, i, TAGTAREA, MPI_COMM_WORLD);
+				currentRow += 1;
+				rowsSent += 1;
+			}
 		}
-		MPI_Send(v,dim,MPI_INT,i,TAGVECTOR,MPI_COMM_WORLD);
+		
+		for (i=1; i<rowsSent; i++) {
+			MPI_Recv(&rowSum, 1, MPI_INT, i, TAGRESULT, MPI_COMM_WORLD, &Stat);	
+			printf("%d\n", rowSum);		
+			if (Stat.MPI_TAG == TAGRESULT) {
+				x[xPos] = rowSum;
+				xPos += 1;
+			}
+		}
 	}
-	
-	for (i=0; i<size; i++) {
-		MPI_Send(0,1,MPI_INT,i,TAGPARAR,MPI_COMM_WORLD);
+	//printvector(f, x);
+	for (i=1; i<size; i++) {
+		MPI_Send(fila, c, MPI_INT, i, TAGPARAR, MPI_COMM_WORLD);
 	}
 	
 	return 0;
@@ -168,6 +188,33 @@ int receive(int rank) {
 		     enviarselo al nodo maestro
 		2.b- Que no hay mas filas a procesar
 	*/
+	
+	int i, sum=0;
+	MPI_Status Stat;
+	
+	int b[MAXCOL];
+	int fila[MAXCOL];
+	
+	MPI_Recv(b, MAXCOL, MPI_INT, 0, TAGVECTOR, MPI_COMM_WORLD, &Stat);
+	//printvector(MAXCOL, b);
+	
+	while (1) {
+		MPI_Recv(fila, MAXCOL, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &Stat);		
+		if (Stat.MPI_TAG == TAGTAREA) {
+			printvector(MAXCOL, fila);
+			sum = 0;
+			for (i=0; i<MAXCOL; i++) {
+				sum += fila[i] * b[i];
+			}
+			//printf("%d\n", sum);
+			MPI_Send(&sum, 1, MPI_INT, 0, TAGRESULT, MPI_COMM_WORLD);
+		}
+		else if (Stat.MPI_TAG == TAGPARAR) {
+			printf("fin %d\n", rank);
+			break;
+		}
+	}
+	
 	return 0;
 }
 
